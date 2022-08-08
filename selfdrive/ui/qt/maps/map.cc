@@ -526,9 +526,12 @@ void MapInstructions::updateInstructions(cereal::NavInstruction::Reader instruct
       fn += "turn_straight";
     }
 
+    if (!active) {
+      fn += "_inactive";
+    }
+
     auto icon = new QLabel;
-    int wh = active ? 125 : 75;
-    icon->setPixmap(loadPixmap(fn + ICON_SUFFIX, {wh, wh}, Qt::IgnoreAspectRatio));
+    icon->setPixmap(loadPixmap(fn + ICON_SUFFIX, {125, 125}, Qt::IgnoreAspectRatio));
     icon->setSizePolicy(QSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed));
     lane_layout->addWidget(icon);
   }
