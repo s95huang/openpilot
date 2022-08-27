@@ -45,7 +45,7 @@ ACADOS_SOLVER_TYPE = 'SQP_RTI'
 # Fewer timestamps don't hurt performance and lead to
 # much better convergence of the MPC with low iterations
 N = 12
-MAX_T = 10.0
+MAX_T = 5.
 T_IDXS_LST = [index_function(idx, max_val=MAX_T, max_idx=N) for idx in range(N+1)]
 
 T_IDXS = np.array(T_IDXS_LST)
@@ -237,7 +237,7 @@ class LongitudinalMpc:
 
   def set_weights_for_lead_policy(self, prev_accel_constraint=True):
     a_change_cost = .1 if prev_accel_constraint else 0
-    W = np.diag([0., .2, .25, 1., 0.0, 1.])
+    W = np.diag([0., .04, .0, 10., 0.0, 10.])
     for i in range(N):
       W[4,4] = a_change_cost * np.interp(T_IDXS[i], [0.0, 1.0, 2.0], [1.0, 1.0, 0.0])
       self.solver.cost_set(i, 'W', W)
