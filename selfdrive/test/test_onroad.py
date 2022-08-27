@@ -26,10 +26,10 @@ PROCS = {
   "./encoderd": 12.5,
   "./camerad": 14.5,
   "./locationd": 9.1,
-  "selfdrive.controls.plannerd": 11.7,
+  "selfdrive.controls.plannerd": 13.5,
   "./_ui": 19.2,
   "selfdrive.locationd.paramsd": 9.0,
-  "./_sensord": 6.17,
+  "./_sensord": 7.0,
   "selfdrive.controls.radard": 4.5,
   "./_modeld": 4.48,
   "./boardd": 3.63,
@@ -94,11 +94,11 @@ def check_cpu_usage(proclogs):
     if len(x) > 2:
       cpu_time = cputime_total(x[-1]) - cputime_total(x[0])
       cpu_usage = cpu_time / dt * 100.
-      if cpu_usage > max(expected_cpu * 1.15, expected_cpu + 5.0):
+      if cpu_usage > max(expected_cpu * 1.15, expected_cpu + 1.):
         # cpu usage is high while playing sounds
         if not (proc_name == "./_soundd" and cpu_usage < 65.):
           err = "using more CPU than normal"
-      elif cpu_usage < min(expected_cpu * 0.65, max(expected_cpu - 1.0, 0.0)):
+      elif cpu_usage < min(expected_cpu * 0.8, max(expected_cpu - 1.0, 0.0)):
         err = "using less CPU than normal"
     else:
       err = "NO METRICS FOUND"
@@ -130,7 +130,8 @@ class TestOnroad(unittest.TestCase):
     os.environ['LOGPRINT'] = 'debug'
 
     params = Params()
-    params.clear_all()
+    #params.clear_all()
+    params.delete("CurrentRoute")
     set_params_enabled()
 
     # Make sure athena isn't running
