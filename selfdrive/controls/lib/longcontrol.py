@@ -121,7 +121,7 @@ class LongControl:
         output_accel = -2
       else:
         if CS.vEgo < 0.1:
-          output_accel = min(2.0, 2.0*(self.t - 8.0))
+          output_accel = 2.0
         else:
           output_accel = -1.0
 
