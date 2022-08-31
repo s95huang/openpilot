@@ -110,13 +110,13 @@ class LongControl:
       if prevent_overshoot:
         output_accel = min(output_accel, 0.0)
 
-      # START PROFILE AT 10MPH
+      # ENGAGE AT 10MPH
       if self.t < 2:
         output_accel = 0.0
       elif self.t < 4:
         output_accel = 2.0*(self.t - 2.0)
       elif self.t < 7:
-        output_accel = -2*(self.t - 2.0) + 2.0
+        output_accel = -2*(self.t - 4.0) + 2.0
       elif self.t < 12.0:
         output_accel = -2
       else:
