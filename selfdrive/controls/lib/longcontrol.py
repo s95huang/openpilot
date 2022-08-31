@@ -54,6 +54,7 @@ class LongControl:
     """Reset PID controller and change setpoint"""
     self.pid.reset()
     self.v_pid = v_pid
+    self.t = 0.0
 
   def update(self, active, CS, long_plan, accel_limits, t_since_plan):
     """Update longitudinal control. This updates the state machine and runs a PID loop"""
@@ -108,6 +109,21 @@ class LongControl:
 
       if prevent_overshoot:
         output_accel = min(output_accel, 0.0)
+
+      # START PROFILE AT 10MPH
+      if self.t < 2:
+        output_accel = 0.0
+      elif self.t < 4:
+        output_accel = 2.0*(self.t - 2.0)
+      elif self.t < 7:
+        output_accel = -2*(self.t - 2.0) + 2.0
+      elif self.t < 12.0:
+        output_accel = -2
+      else:
+        if CS.vEgo < 0.1:
+          output_accel = min(2.0, 2.0*(self.t - 8.0))
+        else:
+          output_accel = -1.0
 
     # Intention is to stop, switch to a different brake control until we stop
     elif self.long_control_state == LongCtrlState.stopping:
