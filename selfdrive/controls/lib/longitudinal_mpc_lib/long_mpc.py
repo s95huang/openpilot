@@ -45,13 +45,13 @@ ACADOS_SOLVER_TYPE = 'SQP_RTI'
 # Fewer timestamps don't hurt performance and lead to
 # much better convergence of the MPC with low iterations
 N = 12
-MAX_T = 10.0
+MAX_T = 2.5
 T_IDXS_LST = [index_function(idx, max_val=MAX_T, max_idx=N) for idx in range(N+1)]
 
 T_IDXS = np.array(T_IDXS_LST)
 T_DIFFS = np.diff(T_IDXS, prepend=[0.])
 MIN_ACCEL = -3.5
-T_FOLLOW = 1.45
+T_FOLLOW = 1.25
 COMFORT_BRAKE = 2.5
 STOP_DISTANCE = 6.0
 
@@ -237,7 +237,7 @@ class LongitudinalMpc:
 
   def set_weights_for_lead_policy(self, prev_accel_constraint=True):
     a_change_cost = .1 if prev_accel_constraint else 0
-    W = np.diag([0., .2, .25, 1., 0.0, 1.])
+    W = np.diag([0., .02, .0, .0, 0.0, 1.])
     for i in range(N):
       W[4,4] = a_change_cost * np.interp(T_IDXS[i], [0.0, 1.0, 2.0], [1.0, 1.0, 0.0])
       self.solver.cost_set(i, 'W', W)
@@ -326,8 +326,8 @@ class LongitudinalMpc:
 
     cruise_target = T_IDXS * v_cruise + x[0]
     x_targets = np.column_stack([x,
-                                lead_0_obstacle - (3/4) * get_safe_obstacle_distance(v),
-                                lead_1_obstacle - (3/4) * get_safe_obstacle_distance(v),
+                                lead_0_obstacle - get_safe_obstacle_distance(v),
+                                lead_1_obstacle - get_safe_obstacle_distance(v),
                                 cruise_target])
     #self.source = SOURCES[np.argmin(x_obstacles[0])]
     self.params[:,2] = 1e3
