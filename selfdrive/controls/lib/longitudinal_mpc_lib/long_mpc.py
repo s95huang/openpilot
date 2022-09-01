@@ -149,7 +149,7 @@ def gen_long_ocp():
   constraints = vertcat(v_ego,
                         (a_ego - a_min),
                         (a_max - a_ego),
-                        ((x_obstacle - x_ego) - (3/4) * (desired_dist_comfort)) / (v_ego + 10.))
+                        ((x_obstacle - x_ego) - (desired_dist_comfort)) / (v_ego + 10.))
   ocp.model.con_h_expr = constraints
 
   x0 = np.zeros(X_DIM)
@@ -236,8 +236,8 @@ class LongitudinalMpc:
       self.set_weights_for_lead_policy(prev_accel_constraint)
 
   def set_weights_for_lead_policy(self, prev_accel_constraint=True):
-    a_change_cost = .1 if prev_accel_constraint else 0
-    W = np.diag([0., .02, .0, .0, 0.0, 1.])
+    a_change_cost = 0.0  # .1 if prev_accel_constraint else 0
+    W = np.diag([0., 5.0, .0, .0, 0.0, 1.])
     for i in range(N):
       W[4,4] = a_change_cost * np.interp(T_IDXS[i], [0.0, 1.0, 2.0], [1.0, 1.0, 0.0])
       self.solver.cost_set(i, 'W', W)
@@ -323,14 +323,15 @@ class LongitudinalMpc:
     # and then treat that as a stopped car/obstacle at this new distance.
     lead_0_obstacle = lead_xv_0[:,0] + get_stopped_equivalence_factor(lead_xv_0[:,1])
     lead_1_obstacle = lead_xv_1[:,0] + get_stopped_equivalence_factor(lead_xv_1[:,1])
+    x_obstacles = np.column_stack([lead_0_obstacle,
+                                   lead_1_obstacle])
 
     cruise_target = T_IDXS * v_cruise + x[0]
     x_targets = np.column_stack([x,
-                                lead_0_obstacle - get_safe_obstacle_distance(v),
-                                lead_1_obstacle - get_safe_obstacle_distance(v),
                                 cruise_target])
+
     #self.source = SOURCES[np.argmin(x_obstacles[0])]
-    self.params[:,2] = 1e3
+    self.params[:,2] = np.min(x_obstacles, axis=1)
     self.params[:,3] = np.copy(self.prev_a)
 
     self.yref[:,1] = np.min(x_targets, axis=1)
