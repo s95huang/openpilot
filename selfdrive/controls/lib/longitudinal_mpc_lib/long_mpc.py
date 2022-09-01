@@ -237,14 +237,14 @@ class LongitudinalMpc:
 
   def set_weights_for_lead_policy(self, prev_accel_constraint=True):
     a_change_cost = 0.0  # .1 if prev_accel_constraint else 0
-    W = np.diag([0., 5.0, .0, .0, 0.0, 1.])
+    W = np.diag([0., 1.0, 0.0, .0, 0.0, 1.])
     for i in range(N):
       W[4,4] = a_change_cost * np.interp(T_IDXS[i], [0.0, 1.0, 2.0], [1.0, 1.0, 0.0])
       self.solver.cost_set(i, 'W', W)
     self.solver.cost_set(N, 'W', np.copy(W[:COST_E_DIM, :COST_E_DIM]))
 
     # Set L2 slack cost on lower bound constraints
-    Zl = np.array([LIMIT_COST, LIMIT_COST, LIMIT_COST, DANGER_ZONE_COST])
+    Zl = np.array([LIMIT_COST, LIMIT_COST, LIMIT_COST, 0.0])
     for i in range(N):
       self.solver.cost_set(i, 'Zl', Zl)
 
@@ -302,13 +302,14 @@ class LongitudinalMpc:
     self.cruise_min_a = min_a
     self.cruise_max_a = max_a
 
-  def update(self, carstate, radarstate, v_cruise, x, v, a):
+  def update(self, carstate, radarstate, v_cruise, x, v, a, j):
     #v_ego = self.x0[1]
     xforward = ((v[1:] + v[:-1]) / 2) * (T_IDXS[1:] - T_IDXS[:-1])
     x = np.cumsum(np.insert(xforward, 0, x[0]))
     self.yref[:,1] = x
     self.yref[:,2] = v
     self.yref[:,3] = a
+    self.yref[:,5] = j
     self.status = radarstate.leadOne.status or radarstate.leadTwo.status
 
     lead_xv_0 = self.process_lead(radarstate.leadOne)

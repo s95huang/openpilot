@@ -100,11 +100,17 @@ class Planner:
       x = np.interp(T_IDXS_MPC, T_IDXS, sm['modelV2'].position.x)
       v = np.interp(T_IDXS_MPC, T_IDXS, sm['modelV2'].velocity.x)
       a = np.interp(T_IDXS_MPC, T_IDXS, sm['modelV2'].acceleration.x)
+      # Interp so gradient is less noisy
+      t_sparse = np.arange(0.0, T_IDXS_MPC[-1] + 0.5, 0.5)
+      a_sparse = np.interp(t_sparse, T_IDXS, sm['modelV2'].acceleration.x)
+      j_sparse = np.gradient(a_sparse, t_sparse)
+      j = np.interp(T_IDXS_MPC, t_sparse, j_sparse)
     else:
       x = np.zeros(len(T_IDXS_MPC))
       v = np.zeros(len(T_IDXS_MPC))
       a = np.zeros(len(T_IDXS_MPC))
-    self.mpc.update(sm['carState'], sm['radarState'], v_cruise, x, v, a)
+      j = np.zeros(len(T_IDXS_MPC))
+    self.mpc.update(sm['carState'], sm['radarState'], v_cruise, x, v, a, j)
     self.v_desired_trajectory = np.interp(T_IDXS[:CONTROL_N], T_IDXS_MPC, self.mpc.v_solution)
     self.a_desired_trajectory = np.interp(T_IDXS[:CONTROL_N], T_IDXS_MPC, self.mpc.a_solution)
     self.j_desired_trajectory = np.interp(T_IDXS[:CONTROL_N], T_IDXS_MPC[:-1], self.mpc.j_solution)
