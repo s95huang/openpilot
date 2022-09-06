@@ -464,14 +464,19 @@ void NvgWindow::drawLaneLines(QPainter &painter, const UIState *s) {
   if (orientation.getZ().size() > 16) {
     orientation_future = std::abs(orientation.getZ()[16]);  // 2.5 seconds
   }
-  // straight: 112, in turns: 70
-  float curve_hue = fmax(70, 112 - (orientation_future * 420));
-  // FIXME: painter.drawPolygon can be slow if hue is not rounded
-  curve_hue = int(curve_hue * 100 + 0.5) / 100;
+  if (scene.end_to_end_long) {
+      bg.setColorAt(0, QColor::fromRgbF(1.0, 0.8, 0.0, 1.0));
+      bg.setColorAt(1, QColor::fromRgbF(1.0, 0.8, 0.0, 0.0));
+    } else {
+    // straight: 112, in turns: 70
+    float curve_hue = fmax(70, 112 - (orientation_future * 420));
+    // FIXME: painter.drawPolygon can be slow if hue is not rounded
+    curve_hue = int(curve_hue * 100 + 0.5) / 100;
 
-  bg.setColorAt(0.0, QColor::fromHslF(148 / 360., 0.94, 0.51, 0.4));
-  bg.setColorAt(0.75 / 1.5, QColor::fromHslF(curve_hue / 360., 1.0, 0.68, 0.35));
-  bg.setColorAt(1.0, QColor::fromHslF(curve_hue / 360., 1.0, 0.68, 0.0));
+    bg.setColorAt(0.0, QColor::fromHslF(148 / 360., 0.94, 0.51, 0.4));
+    bg.setColorAt(0.75 / 1.5, QColor::fromHslF(curve_hue / 360., 1.0, 0.68, 0.35));
+    bg.setColorAt(1.0, QColor::fromHslF(curve_hue / 360., 1.0, 0.68, 0.0));
+  }
   painter.setBrush(bg);
   painter.drawPolygon(scene.track_vertices);
 
