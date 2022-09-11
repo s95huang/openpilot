@@ -23,6 +23,7 @@ class CarControllerParams:
   ACC_UI_STEP = 5
 
   STEER_MAX = 5  # Max correction angle in degrees
+  # TODO: remove this once we understand how the EPS calculates the steering angle better
   STEER_RATIO = 2.75  # Approximate ratio between LatCtlPath_An_Actl and steering angle in radians
   STEER_DRIVER_ALLOWANCE = 0.8  # Driver intervention threshold in Newton-meters
 

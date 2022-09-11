@@ -19,6 +19,7 @@ class CarInterface(CarInterfaceBase):
     ret.safetyConfigs = [get_safety_config(car.CarParams.SafetyModel.ford)]
 
     # Angle-based steering, but we use PID to correct for angle error
+    # TODO: PID controller saturation is not handled correctly
     ret.steerActuatorDelay = 0.2
     ret.steerLimitTimer = 0.4
     tire_stiffness_factor = 1.0
