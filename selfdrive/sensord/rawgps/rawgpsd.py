@@ -17,7 +17,8 @@ from selfdrive.sensord.rawgps.structs import dict_unpacker
 from selfdrive.sensord.rawgps.structs import gps_measurement_report, gps_measurement_report_sv
 from selfdrive.sensord.rawgps.structs import glonass_measurement_report, glonass_measurement_report_sv
 from selfdrive.sensord.rawgps.structs import oemdre_measurement_report, oemdre_measurement_report_sv
-from selfdrive.sensord.rawgps.structs import LOG_GNSS_GPS_MEASUREMENT_REPORT, LOG_GNSS_GLONASS_MEASUREMENT_REPORT
+from selfdrive.sensord.rawgps.structs import oemdre_svpoly_report
+from selfdrive.sensord.rawgps.structs import LOG_GNSS_GPS_MEASUREMENT_REPORT, LOG_GNSS_GLONASS_MEASUREMENT_REPORT, LOG_GNSS_OEMDRE_SVPOLY_REPORT
 from selfdrive.sensord.rawgps.structs import position_report, LOG_GNSS_POSITION_REPORT, LOG_GNSS_OEMDRE_MEASUREMENT_REPORT
 
 DEBUG = int(os.getenv("DEBUG", "0"))==1
@@ -79,9 +80,12 @@ def main() -> NoReturn:
     LOG_GNSS_GPS_MEASUREMENT_REPORT,
     LOG_GNSS_GLONASS_MEASUREMENT_REPORT,
     LOG_GNSS_OEMDRE_MEASUREMENT_REPORT,
+    LOG_GNSS_OEMDRE_SVPOLY_REPORT,
   ]
   pub_types = ['qcomGnss']
   unpack_position, _ = dict_unpacker(position_report)
+  unpack_svpoly, _ = dict_unpacker(oemdre_svpoly_report)
+
   log_types.append(LOG_GNSS_POSITION_REPORT)
   pub_types.append("gpsLocation")
 
@@ -220,8 +224,11 @@ def main() -> NoReturn:
       gps.speedAccuracy = math.sqrt(sum([x**2 for x in vNEDsigma]))
 
       pm.send('gpsLocation', msg)
+    elif log_type == LOG_GNSS_OEMDRE_SVPOLY_REPORT:
+      report = unpack_svpoly(log_payload)
+      print(report)
 
-    if log_type in [LOG_GNSS_GPS_MEASUREMENT_REPORT, LOG_GNSS_GLONASS_MEASUREMENT_REPORT]:
+    elif log_type in [LOG_GNSS_GPS_MEASUREMENT_REPORT, LOG_GNSS_GLONASS_MEASUREMENT_REPORT]:
       msg = messaging.new_message('qcomGnss')
 
       gnss = msg.qcomGnss
