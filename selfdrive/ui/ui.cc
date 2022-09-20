@@ -1,3 +1,4 @@
+#pragma clang diagnostic ignored "-Wunused"
 #include "selfdrive/ui/ui.h"
 
 #include <cassert>
@@ -142,10 +143,16 @@ static void update_state(UIState *s) {
   }
   if (s->worldObjectsVisible()) {
     if (sm.updated("modelV2")) {
+      double cur_t = millis_since_boot();
       update_model(s, sm["modelV2"].getModelV2());
+      double end_t = millis_since_boot();
+      qDebug() << "update_model():" << (end_t - cur_t) << "ms";
     }
     if (sm.updated("longitudinalPlan")) {
+      double cur_t = millis_since_boot();
       update_plan(s);
+      double end_t = millis_since_boot();
+      qDebug() << "update_plan():" << (end_t - cur_t) << "ms";
     }
     if (sm.updated("radarState") && sm.rcv_frame("modelV2") > s->scene.started_frame) {
       update_leads(s, sm["radarState"].getRadarState(), sm["modelV2"].getModelV2().getPosition());
