@@ -9,6 +9,25 @@
 #include "selfdrive/ui/qt/widgets/ssh_keys.h"
 #include "selfdrive/ui/qt/widgets/toggle.h"
 
+class WifiDetails : public QWidget {
+  Q_OBJECT
+
+public:
+  explicit WifiDetails(QWidget *parent = 0);
+
+private:
+  const Network* network;
+  LabelControl* ssid_label;
+  LabelControl* security_label;
+
+signals:
+  void backPress();
+
+public slots:
+  void view(const Network &n);
+  void refresh(bool should_update = true);
+};
+
 class WifiUI : public QWidget {
   Q_OBJECT
 
@@ -27,6 +46,7 @@ private:
 
 signals:
   void connectToNetwork(const Network &n);
+  void viewNetwork(const Network &n);
 
 public slots:
   void refresh();
@@ -64,6 +84,7 @@ private:
   AdvancedNetworking* an = nullptr;
 
   WifiUI* wifiWidget;
+  WifiDetails* detailsWidget;
 
 protected:
   void showEvent(QShowEvent* event) override;
@@ -74,5 +95,6 @@ public slots:
 
 private slots:
   void connectToNetwork(const Network &n);
+  void viewNetwork(const Network &n);
   void wrongPassword(const QString &ssid);
 };

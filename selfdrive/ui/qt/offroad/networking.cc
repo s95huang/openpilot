@@ -40,11 +40,17 @@ Networking::Networking(QWidget* parent, bool show_advanced) : QFrame(parent) {
   wifiWidget = new WifiUI(this, wifi);
   wifiWidget->setObjectName("wifiWidget");
   connect(wifiWidget, &WifiUI::connectToNetwork, this, &Networking::connectToNetwork);
+  connect(wifiWidget, &WifiUI::viewNetwork, this, &Networking::viewNetwork);
 
   ScrollView *wifiScroller = new ScrollView(wifiWidget, this);
   wifiScroller->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
   vlayout->addWidget(wifiScroller, 1);
   main_layout->addWidget(wifiScreen);
+
+  detailsWidget = new WifiDetails(this);
+  detailsWidget->setObjectName("wifiDetailsWidget");
+  connect(detailsWidget, &WifiDetails::backPress, [=]() { main_layout->setCurrentWidget(wifiScreen); });
+  main_layout->addWidget(detailsWidget);
 
   an = new AdvancedNetworking(this, wifi);
   connect(an, &AdvancedNetworking::backPress, [=]() { main_layout->setCurrentWidget(wifiScreen); });
@@ -74,6 +80,7 @@ Networking::Networking(QWidget* parent, bool show_advanced) : QFrame(parent) {
 
 void Networking::refresh() {
   wifiWidget->refresh();
+  detailsWidget->refresh();
   an->refresh();
 }
 
@@ -81,6 +88,7 @@ void Networking::connectToNetwork(const Network &n) {
   if (wifi->isKnownConnection(n.ssid)) {
     wifi->activateWifiConnection(n.ssid);
     wifiWidget->refresh();
+    detailsWidget->refresh();
   } else if (n.security_type == SecurityType::OPEN) {
     wifi->connect(n);
   } else if (n.security_type == SecurityType::WPA) {
@@ -89,6 +97,11 @@ void Networking::connectToNetwork(const Network &n) {
       wifi->connect(n, pass);
     }
   }
+}
+
+void Networking::viewNetwork(const Network &n) {
+  detailsWidget->view(n);
+  main_layout->setCurrentWidget(detailsWidget);
 }
 
 void Networking::wrongPassword(const QString &ssid) {
@@ -292,6 +305,14 @@ void WifiUI::refresh() {
       hlayout->addWidget(connecting, 2, Qt::AlignLeft);
     }
 
+    // Edit button
+    if (wifi->isKnownConnection(network.ssid)) {
+      QPushButton *editBtn = new QPushButton(tr("EDIT"));
+      editBtn->setObjectName("editBtn");
+      QObject::connect(editBtn, &QPushButton::clicked, [=]() { emit viewNetwork(network); });
+      hlayout->addWidget(editBtn, 0, Qt::AlignRight);
+    }
+
     // Forget button
     if (wifi->isKnownConnection(network.ssid) && !wifi->isTetheringEnabled()) {
       QPushButton *forgetBtn = new QPushButton(tr("FORGET"));
@@ -330,4 +351,61 @@ void WifiUI::refresh() {
   }
   list_layout->addWidget(list);
   list_layout->addStretch(1);
+}
+
+WifiDetails::WifiDetails(QWidget* parent) : QWidget(parent), network(nullptr) {
+  QVBoxLayout* main_layout = new QVBoxLayout(this);
+  main_layout->setMargin(40);
+  main_layout->setSpacing(20);
+
+  // Back button
+  QPushButton* back = new QPushButton("Back");
+  back->setObjectName("back_btn");
+  back->setFixedSize(400, 100);
+  connect(back, &QPushButton::clicked, [=]() { emit backPress(); });
+  main_layout->addWidget(back, 0, Qt::AlignLeft);
+
+  // Details list
+  ListWidget* list = new ListWidget(this);
+
+  ssid_label = new LabelControl(tr("SSID"), "");
+  list->addItem(ssid_label);
+
+  security_label = new LabelControl(tr("Security"), "");
+  list->addItem(security_label);
+
+  main_layout->addWidget(new ScrollView(list, this));
+  main_layout->addStretch(1);
+
+  refresh(false);
+}
+
+void WifiDetails::view(const Network &n) {
+  network = &n;
+  refresh();
+}
+
+void WifiDetails::refresh(bool should_update) {
+  if (!network) return;
+
+  // SSID
+  QString ssid = QString::fromUtf8(network->ssid);
+  ssid_label->setValue(network->ssid);
+
+  // Security
+  QString security;
+  switch (network->security_type) {
+    case SecurityType::OPEN:
+      security = tr("Open");
+      break;
+    case SecurityType::WPA:
+      security = tr("WPA2");
+      break;
+    case SecurityType::UNSUPPORTED:
+      security = tr("Unsupported");
+      break;
+  }
+  security_label->setValue(security);
+
+  if (should_update) update();
 }
