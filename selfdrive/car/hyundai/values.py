@@ -287,10 +287,13 @@ FW_QUERY_CONFIG = FwQueryConfig(
       # TODO: there's 200ms delay after few tester presents, not sure if important
       [StdQueries.EXTENDED_DIAGNOSTIC_REQUEST2, StdQueries.TESTER_PRESENT_REQUEST, HYUNDAI_VERSION_REQUEST_LONG],
       [StdQueries.EXTENDED_DIAGNOSTIC_RESPONSE2, StdQueries.TESTER_PRESENT_RESPONSE, HYUNDAI_VERSION_RESPONSE],
+      whitelist_ecus=[Ecu.abs, Ecu.eps, Ecu.transmission, Ecu.fwdCamera, Ecu.fwdRadar],
     ),
+    # Everything on Sonata responds to above except engine which only responds to this query. find what j2534 uses
     Request(
       [StdQueries.EXTENDED_DIAGNOSTIC_REQUEST2, StdQueries.TESTER_PRESENT_REQUEST, HYUNDAI_VERSION_REQUEST_MULTI],
       [StdQueries.EXTENDED_DIAGNOSTIC_RESPONSE2, StdQueries.TESTER_PRESENT_RESPONSE, HYUNDAI_VERSION_RESPONSE],
+      whitelist_ecus=[Ecu.engine],
     ),
   ],
 )
