@@ -38,11 +38,11 @@ MainWindow::MainWindow(QWidget *parent) : QWidget(parent) {
       closeSettings();
     }
   });
-  // QObject::connect(&device, &Device::interactiveTimout, [=]() {
-  //   if (main_layout->currentWidget() == settingsWindow) {
-  //     closeSettings();
-  //   }
-  // });
+   QObject::connect(&device, &Device::interactiveTimout, [=]() {
+//     if (main_layout->currentWidget() == settingsWindow) {
+//       closeSettings();
+//     }
+   });
 
   // load fonts
   QFontDatabase::addApplicationFont("../assets/fonts/Inter-Black.ttf");
