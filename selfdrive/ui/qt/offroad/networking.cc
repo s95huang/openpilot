@@ -350,7 +350,7 @@ void WifiUI::refresh() {
   list_layout->addStretch(1);
 }
 
-WifiDetails::WifiDetails(QWidget* parent) : QWidget(parent), network(nullptr) {
+WifiDetails::WifiDetails(WifiManager *wifi, QWidget *parent) : QWidget(parent), wifi(wifi), network(nullptr) {
   QVBoxLayout* main_layout = new QVBoxLayout(this);
   main_layout->setMargin(40);
   main_layout->setSpacing(20);
@@ -383,13 +383,13 @@ WifiDetails::WifiDetails(QWidget* parent) : QWidget(parent), network(nullptr) {
 
   connect_btn = new QPushButton(tr("Connect"));
   connect_btn->setObjectName("connect_btn");
-  connect_btn->setFixedSize(300, 300);
+  connect_btn->setFixedSize(300, 100);
   QObject::connect(connect_btn, &QPushButton::clicked, this, &WifiDetails::connect);
   controls_layout->addWidget(connect_btn);
 
   auto forget_btn = new QPushButton(tr("Forget"));
   forget_btn->setObjectName("forget_btn");
-  forget_btn->setFixedSize(300, 300);
+  forget_btn->setFixedSize(300, 100);
   QObject::connect(forget_btn, &QPushButton::clicked, this, &WifiDetails::forget);
   controls_layout->addWidget(forget_btn);
 
@@ -485,6 +485,11 @@ void WifiDetails::refresh(bool should_update) {
       break;
   }
   state_label->setText(state);
+
+  // Controls
+  connect_btn->setEnabled(network->connected == ConnectedType::DISCONNECTED);
+  auto known_connection = wifi->isKnownConnection(network->ssid);
+  forget_btn->setDisabled(!known_connection);
 
   // Signal strength (None, Weak, OK, Excellent)
   int strength = std::clamp((int)round(network->strength / 33.), 0, 3);

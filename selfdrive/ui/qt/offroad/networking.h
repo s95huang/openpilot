@@ -14,13 +14,14 @@ class WifiDetails : public QWidget {
   Q_OBJECT
 
 public:
-  explicit WifiDetails(QWidget *parent = 0);
+  explicit WifiDetails(WifiManager *wifi, QWidget *parent = 0);
 
 private:
-  const Network* network;
+  WifiManager *wifi;
+  const Network *network;
 
   QLabel *ssid_label, *state_label;
-  QPushButton *connect_btn;
+  QPushButton *connect_btn, *forget_btn;
 
   LabelControl *signal_label, *security_label;
 

@@ -50,6 +50,7 @@ public:
   bool isKnownConnection(const QString &ssid);
   std::optional<QDBusPendingCall> activateWifiConnection(const QString &ssid);
   NetworkType currentNetworkType();
+  void setNetworkMetered(const QString &ssid, int metered);
   void updateGsmSettings(bool roaming, QString apn);
   void connect(const Network &ssid, const QString &password = {}, const QString &username = {});
 

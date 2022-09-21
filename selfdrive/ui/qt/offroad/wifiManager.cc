@@ -345,6 +345,19 @@ NetworkType WifiManager::currentNetworkType() {
   return NetworkType::NONE;
 }
 
+void WifiManager::setNetworkMetered(const QString &ssid, int metered) {
+  const QDBusObjectPath &path = getConnectionPath(ssid);
+  if (path.path().isEmpty()) {
+    return;
+  }
+
+  Connection settings = getConnectionSettings(path);
+  if (settings.value("connection").value("metered").toInt() != metered) {
+    settings["connection"]["metered"] = metered;
+    call(path.path(), NM_DBUS_INTERFACE_SETTINGS_CONNECTION, "Update", QVariant::fromValue(settings));
+  }
+}
+
 void WifiManager::updateGsmSettings(bool roaming, QString apn) {
   if (!lteConnectionPath.path().isEmpty()) {
     bool changes = false;
@@ -408,16 +421,16 @@ void WifiManager::addTetheringConnection() {
 }
 
 void WifiManager::tetheringActivated(QDBusPendingCallWatcher *call) {
-    int prime_type = uiState()->prime_type;
-    int ipv4_forward = (prime_type == PrimeType::NONE || prime_type == PrimeType::LITE);
+  int prime_type = uiState()->prime_type;
+  int ipv4_forward = (prime_type == PrimeType::NONE || prime_type == PrimeType::LITE);
 
-    if (!ipv4_forward) {
-      QTimer::singleShot(5000, this, [=] {
-        qWarning() << "net.ipv4.ip_forward = 0";
-        std::system("sudo sysctl net.ipv4.ip_forward=0");
-      });
-    }
-    call->deleteLater();
+  if (!ipv4_forward) {
+    QTimer::singleShot(5000, this, [=] {
+      qWarning() << "net.ipv4.ip_forward = 0";
+      std::system("sudo sysctl net.ipv4.ip_forward=0");
+    });
+  }
+  call->deleteLater();
 }
 
 void WifiManager::setTetheringEnabled(bool enabled) {
