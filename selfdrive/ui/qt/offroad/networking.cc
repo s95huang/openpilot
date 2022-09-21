@@ -50,6 +50,8 @@ Networking::Networking(QWidget* parent, bool show_advanced) : QFrame(parent) {
   detailsWidget = new WifiDetails(this);
   detailsWidget->setObjectName("wifiDetailsWidget");
   connect(detailsWidget, &WifiDetails::backPress, [=]() { main_layout->setCurrentWidget(wifiScreen); });
+  connect(detailsWidget, &WifiDetails::connectToNetwork, this, &Networking::connectToNetwork);
+  connect(detailsWidget, &WifiDetails::forgetNetwork, this, &Networking::forgetNetwork);
   main_layout->addWidget(detailsWidget);
 
   an = new AdvancedNetworking(this, wifi);
@@ -102,6 +104,13 @@ void Networking::connectToNetwork(const Network &n) {
 void Networking::viewNetwork(const Network &n) {
   detailsWidget->view(n);
   main_layout->setCurrentWidget(detailsWidget);
+}
+
+void Networking::forgetNetwork(const Network &n) {
+  if (ConfirmationDialog::confirm(tr("Forget Wi-Fi Network \"%1\"?").arg(QString::fromUtf8(n.ssid)), this)) {
+    wifi->forgetConnection(n.ssid);
+    refresh();
+  }
 }
 
 void Networking::wrongPassword(const QString &ssid) {
@@ -233,7 +242,7 @@ WifiUI::WifiUI(QWidget *parent, WifiManager* wifi) : QWidget(parent), wifi(wifi)
       border-radius: 4px;
       background-color: #8A8A8A;
     }
-    #forgetBtn {
+    #editBtn {
       font-size: 32px;
       font-weight: 600;
       color: #292929;
@@ -313,18 +322,6 @@ void WifiUI::refresh() {
       hlayout->addWidget(editBtn, 0, Qt::AlignRight);
     }
 
-    // Forget button
-    if (wifi->isKnownConnection(network.ssid) && !wifi->isTetheringEnabled()) {
-      QPushButton *forgetBtn = new QPushButton(tr("FORGET"));
-      forgetBtn->setObjectName("forgetBtn");
-      QObject::connect(forgetBtn, &QPushButton::clicked, [=]() {
-        if (ConfirmationDialog::confirm(tr("Forget Wi-Fi Network \"%1\"?").arg(QString::fromUtf8(network.ssid)), this)) {
-          wifi->forgetConnection(network.ssid);
-        }
-      });
-      hlayout->addWidget(forgetBtn, 0, Qt::AlignRight);
-    }
-
     // Status icon
     if (network.connected == ConnectedType::CONNECTED) {
       QLabel *connectIcon = new QLabel();
@@ -359,17 +356,53 @@ WifiDetails::WifiDetails(QWidget* parent) : QWidget(parent), network(nullptr) {
   main_layout->setSpacing(20);
 
   // Back button
-  QPushButton* back = new QPushButton("Back");
-  back->setObjectName("back_btn");
-  back->setFixedSize(400, 100);
-  connect(back, &QPushButton::clicked, [=]() { emit backPress(); });
-  main_layout->addWidget(back, 0, Qt::AlignLeft);
+  auto back_btn = new QPushButton(tr("Back"));
+  back_btn->setObjectName("back_btn");
+  back_btn->setFixedSize(400, 100);
+  QObject::connect(back_btn, &QPushButton::clicked, [=]() { emit backPress(); });
+  main_layout->addWidget(back_btn, 0, Qt::AlignLeft);
 
-  // Details list
+  // vertical layout
+  // SSID name
+  // connected/disconnected
+
+  auto ssid_layout = new QVBoxLayout();
+
+  ssid_label = new QLabel("");
+  ssid_label->setObjectName("ssid_label");
+  ssid_layout->addWidget(ssid_label);
+
+  state_label = new QLabel(tr("Connected"));
+  state_label->setObjectName("state_label");
+  ssid_layout->addWidget(state_label);
+
+  main_layout->addLayout(ssid_layout);
+
+  // Controls
+  auto controls_layout = new QHBoxLayout();
+
+  connect_btn = new QPushButton(tr("Connect"));
+  connect_btn->setObjectName("connect_btn");
+  connect_btn->setFixedSize(300, 300);
+  QObject::connect(connect_btn, &QPushButton::clicked, this, &WifiDetails::connect);
+  controls_layout->addWidget(connect_btn);
+
+  auto forget_btn = new QPushButton(tr("Forget"));
+  forget_btn->setObjectName("forget_btn");
+  forget_btn->setFixedSize(300, 300);
+  QObject::connect(forget_btn, &QPushButton::clicked, this, &WifiDetails::forget);
+  controls_layout->addWidget(forget_btn);
+
+  main_layout->addLayout(controls_layout);
+
+  // Signal strength
+  // Frequency (TODO)
+  // Security
+  // Metered (TODO detect automatically/metered/not metered)
   ListWidget* list = new ListWidget(this);
 
-  ssid_label = new LabelControl(tr("SSID"), "");
-  list->addItem(ssid_label);
+  signal_label = new LabelControl(tr("Signal Strength"), "");
+  list->addItem(signal_label);
 
   security_label = new LabelControl(tr("Security"), "");
   list->addItem(security_label);
@@ -378,6 +411,52 @@ WifiDetails::WifiDetails(QWidget* parent) : QWidget(parent), network(nullptr) {
   main_layout->addStretch(1);
 
   refresh(false);
+
+  setStyleSheet(R"(
+    #connect_btn, #forget_btn {
+      font-size: 32px;
+      font-weight: 600;
+      color: #292929;
+      background-color: #BDBDBD;
+      border-width: 1px solid #828282;
+      border-radius: 5px;
+      padding: 40px;
+      padding-bottom: 16px;
+      padding-top: 16px;
+    }
+    #connecting {
+      font-size: 32px;
+      font-weight: 600;
+      color: white;
+      border-radius: 0;
+      padding: 27px;
+      padding-left: 43px;
+      padding-right: 43px;
+      background-color: black;
+    }
+    #ssidLabel {
+      font-size: 55px;
+      font-weight: 300;
+      text-align: left;
+      border: none;
+      padding-top: 50px;
+      padding-bottom: 50px;
+    }
+    #ssidLabel[disconnected=false] {
+      font-weight: 500;
+    }
+    #ssidLabel:disabled {
+      color: #696969;
+    }
+  )");
+}
+
+void WifiDetails::connect() {
+  emit connectToNetwork(*network);
+}
+
+void WifiDetails::forget() {
+  emit forgetNetwork(*network);
 }
 
 void WifiDetails::view(const Network &n) {
@@ -390,7 +469,41 @@ void WifiDetails::refresh(bool should_update) {
 
   // SSID
   QString ssid = QString::fromUtf8(network->ssid);
-  ssid_label->setValue(network->ssid);
+  ssid_label->setText(ssid);
+
+  // State
+  QString state;
+  switch (network->connected) {
+    case ConnectedType::DISCONNECTED:
+      state = tr("Disconnected");
+      break;
+    case ConnectedType::CONNECTING:
+      state = tr("Connecting");
+      break;
+    case ConnectedType::CONNECTED:
+      state = tr("Connected");
+      break;
+  }
+  state_label->setText(state);
+
+  // Signal strength (None, Weak, OK, Excellent)
+  int strength = std::clamp((int)round(network->strength / 33.), 0, 3);
+  QString signal;
+  switch (strength) {
+    case 0:
+      signal = tr("None");
+      break;
+    case 1:
+      signal = tr("Weak");
+      break;
+    case 2:
+      signal = tr("OK");
+      break;
+    case 3:
+      signal = tr("Excellent");
+      break;
+  }
+  signal_label->setValue(signal);
 
   // Security
   QString security;

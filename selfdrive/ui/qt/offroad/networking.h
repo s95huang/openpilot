@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QButtonGroup>
+#include <QLabel>
 #include <QVBoxLayout>
 #include <QWidget>
 
@@ -17,11 +18,19 @@ public:
 
 private:
   const Network* network;
-  LabelControl* ssid_label;
-  LabelControl* security_label;
+
+  QLabel *ssid_label, *state_label;
+  QPushButton *connect_btn;
+
+  LabelControl *signal_label, *security_label;
+
+  void connect();
+  void forget();
 
 signals:
   void backPress();
+  void connectToNetwork(const Network &n);
+  void forgetNetwork(const Network &n);
 
 public slots:
   void view(const Network &n);
@@ -96,5 +105,6 @@ public slots:
 private slots:
   void connectToNetwork(const Network &n);
   void viewNetwork(const Network &n);
+  void forgetNetwork(const Network &n);
   void wrongPassword(const QString &ssid);
 };
