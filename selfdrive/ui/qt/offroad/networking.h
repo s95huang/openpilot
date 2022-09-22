@@ -18,31 +18,27 @@ public:
 
 private:
   WifiManager *wifi;
-  const Network *network;
+  Network network;
 
-  QLabel *ssid_label, *state_label;
   QPushButton *connect_btn, *forget_btn;
 
   LabelControl *signal_label, *security_label;
 
-  void connect();
-  void forget();
-
 signals:
-  void backPress();
   void connectToNetwork(const Network &n);
   void forgetNetwork(const Network &n);
+  void backPress();
 
 public slots:
   void view(const Network &n);
-  void refresh(bool should_update = true);
+  void refresh();
 };
 
 class WifiUI : public QWidget {
   Q_OBJECT
 
 public:
-  explicit WifiUI(QWidget *parent = 0, WifiManager* wifi = 0);
+  explicit WifiUI(WifiManager *wifi = 0, QWidget *parent = 0);
 
 private:
   WifiManager *wifi = nullptr;
@@ -65,7 +61,7 @@ public slots:
 class AdvancedNetworking : public QWidget {
   Q_OBJECT
 public:
-  explicit AdvancedNetworking(QWidget* parent = 0, WifiManager* wifi = 0);
+  explicit AdvancedNetworking(WifiManager *wifi = 0, QWidget *parent = 0);
 
 private:
   LabelControl* ipLabel;

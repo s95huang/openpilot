@@ -37,7 +37,7 @@ Networking::Networking(QWidget* parent, bool show_advanced) : QFrame(parent) {
     vlayout->addSpacing(10);
   }
 
-  wifiWidget = new WifiUI(this, wifi);
+  wifiWidget = new WifiUI(wifi, this);
   wifiWidget->setObjectName("wifiWidget");
   connect(wifiWidget, &WifiUI::connectToNetwork, this, &Networking::connectToNetwork);
   connect(wifiWidget, &WifiUI::viewNetwork, this, &Networking::viewNetwork);
@@ -47,14 +47,14 @@ Networking::Networking(QWidget* parent, bool show_advanced) : QFrame(parent) {
   vlayout->addWidget(wifiScroller, 1);
   main_layout->addWidget(wifiScreen);
 
-  detailsWidget = new WifiDetails(this);
+  detailsWidget = new WifiDetails(wifi, this);
   detailsWidget->setObjectName("wifiDetailsWidget");
-  connect(detailsWidget, &WifiDetails::backPress, [=]() { main_layout->setCurrentWidget(wifiScreen); });
   connect(detailsWidget, &WifiDetails::connectToNetwork, this, &Networking::connectToNetwork);
   connect(detailsWidget, &WifiDetails::forgetNetwork, this, &Networking::forgetNetwork);
+  connect(detailsWidget, &WifiDetails::backPress, [=]() { main_layout->setCurrentWidget(wifiScreen); });
   main_layout->addWidget(detailsWidget);
 
-  an = new AdvancedNetworking(this, wifi);
+  an = new AdvancedNetworking(wifi, this);
   connect(an, &AdvancedNetworking::backPress, [=]() { main_layout->setCurrentWidget(wifiScreen); });
   main_layout->addWidget(an);
 
@@ -90,7 +90,6 @@ void Networking::connectToNetwork(const Network &n) {
   if (wifi->isKnownConnection(n.ssid)) {
     wifi->activateWifiConnection(n.ssid);
     wifiWidget->refresh();
-    detailsWidget->refresh();
   } else if (n.security_type == SecurityType::OPEN) {
     wifi->connect(n);
   } else if (n.security_type == SecurityType::WPA) {
@@ -109,6 +108,7 @@ void Networking::viewNetwork(const Network &n) {
 void Networking::forgetNetwork(const Network &n) {
   if (ConfirmationDialog::confirm(tr("Forget Wi-Fi Network \"%1\"?").arg(QString::fromUtf8(n.ssid)), this)) {
     wifi->forgetConnection(n.ssid);
+    main_layout->setCurrentWidget(wifiScreen);
     refresh();
   }
 }
@@ -133,7 +133,7 @@ void Networking::hideEvent(QHideEvent *event) {
 
 // AdvancedNetworking functions
 
-AdvancedNetworking::AdvancedNetworking(QWidget* parent, WifiManager* wifi): QWidget(parent), wifi(wifi) {
+AdvancedNetworking::AdvancedNetworking(WifiManager *wifi, QWidget *parent): QWidget(parent), wifi(wifi) {
 
   QVBoxLayout* main_layout = new QVBoxLayout(this);
   main_layout->setMargin(40);
@@ -150,7 +150,7 @@ AdvancedNetworking::AdvancedNetworking(QWidget* parent, WifiManager* wifi): QWid
   // Enable tethering layout
   tetheringToggle = new ToggleControl(tr("Enable Tethering"), "", "", wifi->isTetheringEnabled());
   list->addItem(tetheringToggle);
-  QObject::connect(tetheringToggle, &ToggleControl::toggleFlipped, this, &AdvancedNetworking::toggleTethering);
+  connect(tetheringToggle, &ToggleControl::toggleFlipped, this, &AdvancedNetworking::toggleTethering);
 
   // Change tethering password
   ButtonControl *editPasswordButton = new ButtonControl(tr("Tethering Password"), tr("EDIT"));
@@ -173,7 +173,7 @@ AdvancedNetworking::AdvancedNetworking(QWidget* parent, WifiManager* wifi): QWid
   // Roaming toggle
   const bool roamingEnabled = params.getBool("GsmRoaming");
   ToggleControl *roamingToggle = new ToggleControl(tr("Enable Roaming"), "", "", roamingEnabled);
-  QObject::connect(roamingToggle, &SshToggle::toggleFlipped, [=](bool state) {
+  connect(roamingToggle, &SshToggle::toggleFlipped, [=](bool state) {
     params.putBool("GsmRoaming", state);
     wifi->updateGsmSettings(state, QString::fromStdString(params.get("GsmApn")));
   });
@@ -215,7 +215,7 @@ void AdvancedNetworking::toggleTethering(bool enabled) {
 
 // WifiUI functions
 
-WifiUI::WifiUI(QWidget *parent, WifiManager* wifi) : QWidget(parent), wifi(wifi) {
+WifiUI::WifiUI(WifiManager *wifi, QWidget *parent) : QWidget(parent), wifi(wifi) {
   main_layout = new QVBoxLayout(this);
   main_layout->setContentsMargins(0, 0, 0, 0);
   main_layout->setSpacing(0);
@@ -350,7 +350,7 @@ void WifiUI::refresh() {
   list_layout->addStretch(1);
 }
 
-WifiDetails::WifiDetails(WifiManager *wifi, QWidget *parent) : QWidget(parent), wifi(wifi), network(nullptr) {
+WifiDetails::WifiDetails(WifiManager *wifi, QWidget *parent) : QWidget(parent), wifi(wifi) {
   QVBoxLayout* main_layout = new QVBoxLayout(this);
   main_layout->setMargin(40);
   main_layout->setSpacing(20);
@@ -362,43 +362,60 @@ WifiDetails::WifiDetails(WifiManager *wifi, QWidget *parent) : QWidget(parent), 
   QObject::connect(back_btn, &QPushButton::clicked, [=]() { emit backPress(); });
   main_layout->addWidget(back_btn, 0, Qt::AlignLeft);
 
-  // vertical layout
-  // SSID name
-  // connected/disconnected
+  // Header
+  // - SSID name
+  // - Connection state (connected/disconnected)
+  {
+    auto ssid_layout = new QVBoxLayout();
 
-  auto ssid_layout = new QVBoxLayout();
+    auto ssid = QString::fromUtf8(network.ssid);
+    auto ssid_label = new QLabel(ssid);
+    ssid_label->setObjectName("ssid_label");
+    ssid_layout->addWidget(ssid_label);
 
-  ssid_label = new QLabel("");
-  ssid_label->setObjectName("ssid_label");
-  ssid_layout->addWidget(ssid_label);
+    auto state_label = new QLabel(tr("Connected"));
+    state_label->setObjectName("state_label");
+    ssid_layout->addWidget(state_label);
 
-  state_label = new QLabel(tr("Connected"));
-  state_label->setObjectName("state_label");
-  ssid_layout->addWidget(state_label);
-
-  main_layout->addLayout(ssid_layout);
+    main_layout->addLayout(ssid_layout);
+  }
 
   // Controls
+  // - Connect
+  // - Forget
   auto controls_layout = new QHBoxLayout();
 
+  // TODO: icon button
   connect_btn = new QPushButton(tr("Connect"));
-  connect_btn->setObjectName("connect_btn");
+  connect_btn->setProperty("class", "control");
   connect_btn->setFixedSize(300, 100);
-  QObject::connect(connect_btn, &QPushButton::clicked, this, &WifiDetails::connect);
+  connect(connect_btn, &QPushButton::clicked, this, [=]() {
+    if (network.connected == ConnectedType::DISCONNECTED) {
+      emit connectToNetwork(network);
+      emit backPress();
+    }
+  });
   controls_layout->addWidget(connect_btn);
 
-  auto forget_btn = new QPushButton(tr("Forget"));
-  forget_btn->setObjectName("forget_btn");
+  // TODO: icon button
+  forget_btn = new QPushButton(tr("Forget"));
+  forget_btn->setProperty("class", "control");
   forget_btn->setFixedSize(300, 100);
-  QObject::connect(forget_btn, &QPushButton::clicked, this, &WifiDetails::forget);
+  connect(forget_btn, &QPushButton::clicked, this, [=]() {
+    if (wifi->isKnownConnection(network.ssid)) {
+      emit forgetNetwork(network);
+      emit backPress();
+    }
+  });
   controls_layout->addWidget(forget_btn);
 
   main_layout->addLayout(controls_layout);
 
-  // Signal strength
-  // Frequency (TODO)
-  // Security
-  // Metered (TODO detect automatically/metered/not metered)
+  // Network details
+  // - Signal strength
+  // - Frequency (TODO)
+  // - Security
+  // - Metered (detect automatically/metered/not metered) (TODO)
   ListWidget* list = new ListWidget(this);
 
   signal_label = new LabelControl(tr("Signal Strength"), "");
@@ -407,13 +424,14 @@ WifiDetails::WifiDetails(WifiManager *wifi, QWidget *parent) : QWidget(parent), 
   security_label = new LabelControl(tr("Security"), "");
   list->addItem(security_label);
 
+  // TODO: fix not full width
   main_layout->addWidget(new ScrollView(list, this));
   main_layout->addStretch(1);
 
-  refresh(false);
+  refresh();
 
   setStyleSheet(R"(
-    #connect_btn, #forget_btn {
+    QPushButton.control {
       font-size: 32px;
       font-weight: 600;
       color: #292929;
@@ -423,6 +441,9 @@ WifiDetails::WifiDetails(WifiManager *wifi, QWidget *parent) : QWidget(parent), 
       padding: 40px;
       padding-bottom: 16px;
       padding-top: 16px;
+    }
+    QPushButton.control:disabled {
+      background-color: #909090;
     }
     #connecting {
       font-size: 32px;
@@ -451,29 +472,19 @@ WifiDetails::WifiDetails(WifiManager *wifi, QWidget *parent) : QWidget(parent), 
   )");
 }
 
-void WifiDetails::connect() {
-  emit connectToNetwork(*network);
-}
-
-void WifiDetails::forget() {
-  emit forgetNetwork(*network);
-}
-
 void WifiDetails::view(const Network &n) {
-  network = &n;
+  network = n;
   refresh();
 }
 
-void WifiDetails::refresh(bool should_update) {
-  if (!network) return;
-
+void WifiDetails::refresh() {
   // SSID
-  QString ssid = QString::fromUtf8(network->ssid);
+  QString ssid = QString::fromUtf8(network.ssid);
   ssid_label->setText(ssid);
 
   // State
   QString state;
-  switch (network->connected) {
+  switch (network.connected) {
     case ConnectedType::DISCONNECTED:
       state = tr("Disconnected");
       break;
@@ -487,12 +498,12 @@ void WifiDetails::refresh(bool should_update) {
   state_label->setText(state);
 
   // Controls
-  connect_btn->setEnabled(network->connected == ConnectedType::DISCONNECTED);
-  auto known_connection = wifi->isKnownConnection(network->ssid);
+  connect_btn->setEnabled(network.connected == ConnectedType::DISCONNECTED);
+  auto known_connection = wifi->isKnownConnection(network.ssid);
   forget_btn->setDisabled(!known_connection);
 
   // Signal strength (None, Weak, OK, Excellent)
-  int strength = std::clamp((int)round(network->strength / 33.), 0, 3);
+  int strength = std::clamp((int)round(network.strength / 33.), 0, 3);
   QString signal;
   switch (strength) {
     case 0:
@@ -512,7 +523,7 @@ void WifiDetails::refresh(bool should_update) {
 
   // Security
   QString security;
-  switch (network->security_type) {
+  switch (network.security_type) {
     case SecurityType::OPEN:
       security = tr("Open");
       break;
@@ -525,5 +536,5 @@ void WifiDetails::refresh(bool should_update) {
   }
   security_label->setValue(security);
 
-  if (should_update) update();
+  update();
 }
