@@ -8,7 +8,6 @@ import time
 import threading
 import queue
 import unittest
-from dataclasses import asdict, replace
 from datetime import datetime, timedelta
 
 from multiprocessing import Process
@@ -221,7 +220,7 @@ class TestAthenadMethods(unittest.TestCase):
     fn = os.path.join(athenad.ROOT, 'qlog.bz2')
     Path(fn).touch()
     item = athenad.UploadItem(path=fn, url="http://localhost:44444/qlog.bz2", headers={}, created_at=int(time.time()*1000), id='', allow_cellular=True)
-    item_no_retry = replace(item, retry_count=MAX_RETRY_COUNT)
+    item_no_retry = item._replace(retry_count=MAX_RETRY_COUNT)
 
     end_event = threading.Event()
     thread = threading.Thread(target=athenad.upload_handler, args=(end_event,))
@@ -318,7 +317,7 @@ class TestAthenadMethods(unittest.TestCase):
 
     items = dispatcher["listUploadQueue"]()
     self.assertEqual(len(items), 1)
-    self.assertDictEqual(items[0], asdict(item))
+    self.assertDictEqual(items[0], item._asdict())
     self.assertFalse(items[0]['current'])
 
     athenad.cancelled_uploads.add(item.id)
@@ -343,7 +342,7 @@ class TestAthenadMethods(unittest.TestCase):
     athenad.UploadQueueCache.initialize(athenad.upload_queue)
 
     self.assertEqual(athenad.upload_queue.qsize(), 1)
-    self.assertDictEqual(athenad.upload_queue.queue[-1]._asdict(), asdict(item1))
+    self.assertDictEqual(athenad.upload_queue.queue[-1]._asdict(), item1._asdict())
 
   @mock.patch('selfdrive.athena.athenad.create_connection')
   def test_startLocalProxy(self, mock_create_connection):
