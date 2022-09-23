@@ -438,8 +438,17 @@ def uploadFilesToUrls(files_data: List[UploadFileDict]) -> UploadFilesToUrlRespo
 
 @dispatcher.add_method
 def listUploadQueue() -> List[UploadItemDict]:
-  items = list(upload_queue.queue) + list(cur_upload_items.values())
-  return [asdict(i) for i in items if (i is not None) and (i.id not in cancelled_uploads)]
+  FakeItem = lambda x: {
+    "id": "fake" + str(x),
+    "path": "/data/media/0/realdata/2021-03-31--16-58-10/0/rlog.bz2",
+    "url": "https://athena.comma.ai/api/v1/logupload",
+    "headers": {"Authorization": "Token 123"},
+    "created_at": 1617219890000,
+    "allow_cellular": True,
+  }
+  return [FakeItem(i) for i in range(1000)]
+  # items = list(upload_queue.queue) + list(cur_upload_items.values())
+  # return [asdict(i) for i in items if (i is not None) and (i.id not in cancelled_uploads)]
 
 
 @dispatcher.add_method
@@ -716,6 +725,7 @@ def ws_recv(ws: WebSocket, end_event: threading.Event) -> None:
   while not end_event.is_set():
     try:
       opcode, data = ws.recv_data(control_frame=True)
+      print(f"athena.ws_recv opcode {opcode} data {data}")
       if opcode in (ABNF.OPCODE_TEXT, ABNF.OPCODE_BINARY):
         if opcode == ABNF.OPCODE_TEXT:
           data = data.decode("utf-8")
@@ -741,10 +751,12 @@ def ws_send(ws: WebSocket, end_event: threading.Event) -> None:
       except queue.Empty:
         data = low_priority_send_queue.get(timeout=1)
       for i in range(0, len(data), WS_FRAME_SIZE):
-        frame = data[i:i+WS_FRAME_SIZE]
+        frame_data = data[i:i+WS_FRAME_SIZE]
         last = i + WS_FRAME_SIZE >= len(data)
         opcode = ABNF.OPCODE_TEXT if i == 0 else ABNF.OPCODE_CONT
-        ws.send_frame(ABNF.create_frame(frame, opcode, last))
+        frame = ABNF.create_frame(frame_data, opcode, last)
+        print(f"athena.ws_send {frame}")
+        ws.send_frame(frame)
     except queue.Empty:
       pass
     except Exception:
