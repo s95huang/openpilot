@@ -8,6 +8,7 @@ import time
 import threading
 import queue
 import unittest
+from dataclasses import replace
 from datetime import datetime, timedelta
 
 from multiprocessing import Process
@@ -220,7 +221,7 @@ class TestAthenadMethods(unittest.TestCase):
     fn = os.path.join(athenad.ROOT, 'qlog.bz2')
     Path(fn).touch()
     item = athenad.UploadItem(path=fn, url="http://localhost:44444/qlog.bz2", headers={}, created_at=int(time.time()*1000), id='', allow_cellular=True)
-    item_no_retry = item._replace(retry_count=MAX_RETRY_COUNT)
+    item_no_retry = replace(item, retry_count=MAX_RETRY_COUNT)
 
     end_event = threading.Event()
     thread = threading.Thread(target=athenad.upload_handler, args=(end_event,))
@@ -291,7 +292,7 @@ class TestAthenadMethods(unittest.TestCase):
     self.assertEqual(len(items), 0)
 
   @with_http_server
-  def test_listUploadQueueCurrent(self, host: str):
+  def test_listUploadQueueCurrent(self, host):
     fn = os.path.join(athenad.ROOT, 'qlog.bz2')
     Path(fn).touch()
     item = athenad.UploadItem(path=fn, url=f"{host}/qlog.bz2", headers={}, created_at=int(time.time()*1000), id='', allow_cellular=True)
