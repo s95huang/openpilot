@@ -148,7 +148,8 @@ int sensor_loop(I2CBus *i2c_bus_imu) {
     return -1;
   }
 
-  PubMaster pm({PM_GYRO, PM_GYRO_2, PM_ACCEL, PM_ACCEL_2, PM_TEMP, PM_LIGHT, PM_MAGN});
+  PubMaster pm({"gyroscope", "gyroscope2", "accelerometer", "accelerometer2",
+                "temperatureSensor", "lightSensor", "magnetometer"});
   init_ts = nanos_since_boot();
 
   // thread for reading events via interrupts
