@@ -430,7 +430,7 @@ def uploadFilesToUrls(files_data: List[UploadFileDict]) -> UploadFilesToUrlRespo
 
   UploadQueueCache.cache(upload_queue)
 
-  resp: UploadFilesToUrlResponse = {"enqueued": len(items), "items": items}
+  resp: UploadFilesToUrlResponse= {"enqueued": len(items), "items": items}
   if failed:
     resp["failed"] = failed
 

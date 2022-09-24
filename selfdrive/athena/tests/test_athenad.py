@@ -8,7 +8,7 @@ import time
 import threading
 import queue
 import unittest
-from dataclasses import replace
+from dataclasses import asdict, replace
 from datetime import datetime, timedelta
 
 from multiprocessing import Process
@@ -318,7 +318,7 @@ class TestAthenadMethods(unittest.TestCase):
 
     items = dispatcher["listUploadQueue"]()
     self.assertEqual(len(items), 1)
-    self.assertDictEqual(items[0], item._asdict())
+    self.assertDictEqual(items[0], asdict(item))
     self.assertFalse(items[0]['current'])
 
     athenad.cancelled_uploads.add(item.id)
@@ -343,7 +343,7 @@ class TestAthenadMethods(unittest.TestCase):
     athenad.UploadQueueCache.initialize(athenad.upload_queue)
 
     self.assertEqual(athenad.upload_queue.qsize(), 1)
-    self.assertDictEqual(athenad.upload_queue.queue[-1]._asdict(), item1._asdict())
+    self.assertDictEqual(asdict(athenad.upload_queue.queue[-1]), asdict(item1))
 
   @mock.patch('selfdrive.athena.athenad.create_connection')
   def test_startLocalProxy(self, mock_create_connection):
