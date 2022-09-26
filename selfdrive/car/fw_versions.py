@@ -91,13 +91,18 @@ def match_fw_to_car_fuzzy(fw_versions_dict, log=True, exclude=None):
     return set()
 
 
-def match_fw_to_car_exact(fw_versions_dict):
+def is_fw_for_brand(fw_versions, brand):
+  brand_fw_versions = {fw_version for ecu in VERSIONS[brand].values() for fw_list in ecu.values() for fw_version in fw_list}
+  return not set(fw_versions).isdisjoint(brand_fw_versions)
+
+
+def match_fw_to_car_exact(fw_versions_dict, brand=None):
   """Do an exact FW match. Returns all cars that match the given
   FW versions for a list of "essential" ECUs. If an ECU is not considered
   essential the FW version can be missing to get a fingerprint, but if it's present it
   needs to match the database."""
   invalid = []
-  candidates = FW_VERSIONS
+  candidates = [FW_VERSIONS[brand]] if brand else FW_VERSIONS
 
   for candidate, fws in candidates.items():
     for ecu, expected_versions in fws.items():
@@ -202,12 +207,20 @@ def get_fw_versions_ordered(logcan, sendcan, ecu_rx_addrs, timeout=0.1, debug=Fa
   brand_matches = get_brand_ecu_matches(ecu_rx_addrs)
 
   for brand in sorted(brand_matches, key=lambda b: len(brand_matches[b]), reverse=True):
-    car_fw = get_fw_versions(logcan, sendcan, query_brand=brand, timeout=timeout, debug=debug, progress=progress)
-    all_car_fw.extend(car_fw)
-    # Try to match using FW returned from this brand only
-    matches = match_fw_to_car_exact(build_fw_dict(car_fw))
-    if len(matches) == 1:
-      break
+    # retry a brand up to 10 times once any ecu fw version is an exact match
+    # (some ecus skip sending frames from time to time, and other ecus may have rate limiting)
+    for _ in range(10):
+      car_fw = get_fw_versions(logcan, sendcan, query_brand=brand, timeout=timeout, debug=debug, progress=progress)
+      all_car_fw.extend(car_fw)
+      if not is_fw_for_brand(car_fw, brand):
+        break
+      # Try to match using FW returned from this brand only
+      matches = match_fw_to_car_exact(build_fw_dict(car_fw), brand)
+      if len(matches) == 1:
+        break
+      # wait before retry in case failures are due to an ECU rate limiting us
+      print(f"retrying brand: {brand} ...")
+      time.sleep(1)
 
   return all_car_fw
 
